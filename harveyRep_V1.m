@@ -20,24 +20,19 @@ end
 myscreen = initScreen;
 
 %testing flag
-inScanner = 0; %1 if we're not in the MRI set this flag
+Testing = 1; %1 if we're not in the MRI set this flag
 
-% number of stimulus presentations and cycles
-nStimuliPerCyclePre = 16;
-nCyclesPre = 1;
-nStimuliPerCycle = 156;
-nCycles = 3;
-
-% time stimulus is on and off
-stimOnLen = 0.3;
-stimOffLen = 0.45;
+if Testing
+    task{1}.waitForBacktick = 0; %don't wait for backticks from the scanner right now
+else
+    task{1}.waitForBacktick = 1; %if not testing wait for backticks!
+end
 
 % task parameters
-task{1}.waitForBacktick = inScanner; % wait for backticks from the scanner
-task{1}.numTrials = 1;
-task{1}.seglen = repmat([stimOnLen stimOffLen],1,nStimuliPerCyclePre); %specify segment lengths in seconds
+task{1}.numTrials = 2;
+task{1}.seglen = [0.3 0.45]; %specify segment lengths in seconds
+task{1}.seglen = repmat([0.3 0.45],[1 size(testStimuli,1)]);
 task{1}.randVars.stimuli = testStimuli;
-task{1}.randVars.dotColor = testStimuli(:,2);
 
 %Each task is broken up into trials, each of which has the same structure
 %in terms of segments. The number of segments is defined impicitly... you
@@ -64,14 +59,11 @@ task{1}.randVars.dotColor = testStimuli(:,2);
 %synchToVol flags indicate whether the code will line up segments to volume
 %acquisitions (eg, wait for a backtick from the scanner before moving on
 %form the segment).
-task{1}.synchToVol = zeros(1,2*nStimuliPerCyclePre); %no synch at the moment
-if (inScanner)
-  task{1}.synchToVol(end) = 1;
-end
+task{1}.synchToVol = zeros(1,10); %no synch at the moment
 
 %getResponse indicates that the response callback should run during a
 %particular segment
-task{1}.getResponse = ones(1,2*nStimuliPerCyclePre); %get response on both segments
+task{1}.getResponse = ones(2*size(testStimuli,1),1); %get response on every segment
 
 %fixed stimulus parameters - any constants we need for the experiment go
 %here. If a parameter gets only one value, it's a constant
@@ -92,13 +84,7 @@ task{1}.parameter.number = 1; %here we will put the actual numbers we are
 %task{1}.randVars.calculated.response = nan; - just if we want responses
 %we'll set up a variable to track them if we need to.
 
-task{2} = task{1};
-task{2}.seglen = repmat([stimOnLen stimOffLen],1,nStimuliPerCycle); %specify segment lengths in seconds
-task{2}.waitForBacktick = 0;
-task{2}.synchToVol = zeros(1,2*nStimuliPerCycle);
-if (inScanner),task{2}.synchToVol(end) = 1;end
-task{2}.getResponse = ones(1,2*nStimuliPerCycle); %get response on both segments
-task{2}.numTrials = inf;
+
 
 % initialize the task
 for phaseNum = 1:length(task)
@@ -117,7 +103,7 @@ myscreen = initStimulus('stimulus',myscreen);
 
 
 phaseNum = 1;
-while ~myscreen.userHitEsc
+while (phaseNum <= length(task)) && ~myscreen.userHitEsc
   % update the task
   [task myscreen phaseNum] = updateTask(task,myscreen,phaseNum);
   % flip screen
@@ -132,7 +118,7 @@ myscreen = endTask(myscreen,task);
 % function that gets called at the start of each segment
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [task myscreen] = startSegmentCallback(task, myscreen)
-    disp(['start segment ' num2str(task.thistrial.thisseg)]);
+    disp(['start segment ' num2str(task.thistrial.thisseg)]); 
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -144,16 +130,8 @@ function [task myscreen] = screenUpdateCallback(task, myscreen)
 %     x = [1 1];
 %     y = [1 -2];
 %     sz = [1.5 1.5];
-    if(task.thistrial.thisphase == 1)
-        stimIndex = ceil(task.thistrial.thisseg/2);
-    else
-        stimIndex = 16 + (task.trialnum-1)*156 + ceil(task.thistrial.thisseg/2);
-    end
-    if(stimIndex>size(testStimuli,1))
-        stimIndex = 1;
-    end
-    currStim = testStimuli{stimIndex,1};
-    dotColor = testStimuli{stimIndex,2};
+    currStim = testStimuli{ceil(task.thistrial.thisseg/2),1};
+    dotColor = testStimuli{ceil(task.thistrial.thisseg/2),2};
 %global stimulus
 % 
     % clear the screen to gray
@@ -166,7 +144,7 @@ function [task myscreen] = screenUpdateCallback(task, myscreen)
     mglLines2(5.5,-5.5,-5.5,5.5,1,[1 0 0]);
     
     
-if (mod(task.thistrial.thisseg,2) == 1)
+if (mod(task.thistrial.thisseg,2) == 1) %happy trick - odd segments we draw
     % draw points with 50 roundness (polygon edges) and color black
     if dotColor == 1
         mglGluDisk(currStim(:,1), currStim(:,2), currStim(1,3),[1 1 1],50); %this is easy once we have matrix pulled out
