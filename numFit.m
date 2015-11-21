@@ -9,8 +9,20 @@
 function retval = numFit(v,overlayNum,scan,x,y,s,roi)
 
 % get time series
-tSeries = squeeze(loadTSeries(v,scan,s,[],x,y));
+tSeries = squeeze(loadTSeries(v,scan,s,[],x,y));tSeries = tSeries(:);
 concatInfo = viewGet(v,'concatInfo');
+
+% get stimvols
+stimvol = getStimvol(v,'_all_','taskNum=1','phaseNum=2');
+
+% now average over trials
+trialVols = stimvol{1};
+trialLen = min(diff(trialVols));
+nTrials = length(trialVols)-1;
+for iTrials = 1:nTrials
+  meanTSeries(iTrials,1:trialLen) = tSeries(trialVols(iTrials):trialVols(iTrials)+trialLen-1);
+end
+tSeries = mean(meanTSeries,1);
 
 % percent signal change
 tSeries = (tSeries-mean(tSeries))/mean(tSeries);
@@ -32,8 +44,8 @@ fitParams.stim =  []
 
 % Just for testing
 r = getModelResidual(fitParams.initParams,tSeries,fitParams);
-
 keyboard
+
 % find best parameters
 [params fval exitflag] = fminsearch(@getModelResidual,fitParams.initParams,fitParams.optimParams,tSeries,fitParams);
 
@@ -54,6 +66,7 @@ p = getFitParams(params,fitParams);
 
 % FIX, compute the RF response to the stimulus (using fitParams.stim which should have the stimulus sequence)
 modelResponse = zeros(1,length(tSeries));
+%modelResponse = computeModelResponse(rfModel, fitParams.stim,...)
 
 % get a model hrf
 hrf = getCanonicalHRF(p.canonical,fitParams.framePeriod);
@@ -74,6 +87,7 @@ if dispFit
   plot(100*modelResponse,'r-');
   xlabel('Time (vols)');
   ylabel('BOLD (% signal change)');
+  title(sprintf('Center: %f Width: %f',p.center,p.width));
   drawnow
 end
   
