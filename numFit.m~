@@ -42,7 +42,7 @@ fitParams.framePeriod = viewGet(v,'framePeriod');
 % retrieve the stimulus sequence (which numbers of dots where shown during
 % which TRs)
 fitParams.stim =  numberListFromStim(stimvol.stimfile{1,1}.task{1,2},900,size(stimvol.stimfile{1,1}.task{1,2}.seglen,2));
-fitParams.stim = fitParams.stim(trialVols(1):trialVols(1)+trialLen-1);
+fitParams.stim = fitParams.stim(trialVols(1):trialVols(1)+trialLen);
 
 % Just for testing
 %r = getModelResidual(fitParams.initParams,tSeries,fitParams);
